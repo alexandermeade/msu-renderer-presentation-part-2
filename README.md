@@ -150,17 +150,13 @@ Matrix multiplication has an algoirthm to it and is preformed the way listed in 
 <p align = "center">
   <img width="800" height="400" alt="Multiplication-of-3-by-3-Matrices-01" src="https://github.com/user-attachments/assets/0a96ca9c-3274-4d1d-815f-fb6a00c311dd" />
 </p>
-Matrix multiplication is not commutative meaning if A and B are matrixs and
-
-$$A \not = B$$ $$ B \not = A^{-1}$$
-
-then
+Matrix multiplication is generally non commutative meaning if A and B are matrixs and
 
 $$
-  AB \not = BA 
+  AB \not = B A
 $$
 
-Vectors are a special case of matrixs where there is a $1 \times n$ matrix.
+Vectors are a special case of matrixs where there is a $n \times 1$ matrix.
 
 $$
   \vec{v} = \begin{bmatrix} 
@@ -169,6 +165,16 @@ $$
     \vdots \\
     n
     \end{bmatrix} 
+$$
+
+
+A good thing to note is that a matrix multiplied by a vector will always result in a vector regardless of direction of multiplication.
+
+$$
+  \vec{v}M \implies \vec{r}
+$$
+$$
+  M \vec{v} \implies \vec{r}
 $$
 
 # Camera
