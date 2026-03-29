@@ -1,5 +1,5 @@
 # The Goal of this Repo
-This repo is to give a nice tour of how 3d rendering works. 
+A friendly walkthrough of how 3D rendering works from scratch, using Python. By the end you'll get a feel for the full graphics pipeline from loading a 3D model to getting it on screen. 
 
 # What is a cpu renderer 
 A CPU renderer is a primitive style of renderer mostly used to show off how a renderer works without having to worry about implementing the techniques for a GPU. 
@@ -9,7 +9,15 @@ There are heavy limitations put ontop of a CPU renderer and I would highly advis
 # Software Prequisites 
 This tutorial was written using the [Python](https://www.python.org/) programming language with the [UV](https://docs.astral.sh/uv/guides/install-python/) package and project manager. 
 
-> You do not need [UV](https://docs.astral.sh/uv/guides/install-python/) to complete this tutorial however python is essential. 
+> You do not need [UV](https://docs.astral.sh/uv/guides/install-python/) to complete this tutorial however python is essential.
+
+The packages used in this tutorial are as follows
+-  Pygame (Window and Rendering)
+-  NumPy (Matrix Math)
+
+The optional dependenices include
+-  Pydantic (Better Data Representation)
+-  Pathlib (Makes working with file paths nicer)
 
 
 ## What is a `.obj` file? 
@@ -65,9 +73,59 @@ The way this cube gets subsected and rerendered back out in triangles looks like
   <img width="294" height="285" alt="image" src="https://github.com/user-attachments/assets/e27a2945-ff26-448c-961f-c15807859688" />
 </p>
 
+
+We can read this file using this algorithm
+
+```py
+lines:list[str] = self.path.read_text().splitlines()
+render_buffer = RenderBuffer()
+for line in lines: 
+    line = line.strip()
+    if line[0] == 'v':
+        values = line[1:] 
+
+        values:list[str] = values.strip().split(' ')
+        float_values:list[float] = [] 
+        
+        for value in values:
+            float_values.append(float(value))
+        float_values.append(1)
+        render_buffer.verts.append(float_values)
+        continue
+
+    if line[0] == 'f':
+        values = line[1:] 
+
+        values:list[str] = values.strip().split(' ')
+        index_values:list[tuple[int, int, int]] = [] 
+        
+        for value in values:
+            index_values.append(int(value) - 1)
+
+        render_buffer.tris.append(tuple(index_values))
+        continue
+```
+
+With `RenderBuffer` being a class for holding our vertexs and triangles.
+```py
+class RenderBuffer:
+    verts: list[np.ndarray] 
+    tris: list[tuple[int, int, int]] 
+
+    def __init__(self):
+      self.verts = []
+      self.tris = []
+    
+    def __repr__(self):
+        return f"vertexs: {self.verts}\nindex order {self.tris}"
+```
+
+Now you may notice that as we are appending the points into a vertexs we actually extend the vertexs by one extra coordiniate and we set it to 1 for all vertexs. The reason we do this is revealed later in the README. 
+
+
 # Math Prerequisites 
 As you have probably noticed when building a 3D renderer there is a pretty clear and hard issue that gets presented almost immeditatly.
-How do we go from a set of vertexs $\mathbb{R^3}$ into a set of points on a screen $\mathbb{R^2}$. 
+How do we go from a set of vertexs $\mathbb{R}^4$ into a set of points on a screen $\mathbb{R}^2$. 
 
 To do this we are going to utalize Linear Algebra which is a set of mathematics created for dealing with problems in $n$-th dimensional space via matrixs.
 
@@ -108,6 +166,33 @@ $$
     \end{bmatrix} 
 $$
 
+# Camera
+
+A camera's job in rendering is to mimic looking through a camera at some kind of scene. So using that we can reflect some of the properties a camera will have. 
+
+<p>
+  <img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/500c8cbe-f1d3-4b37-b8ad-cd45dc1799a2" />
+</p>
+
+- `fov` aka field of view represents how wide of an angle you are capabale of seeing.
+- `zfar` represents the far plane on the z-axis which shows how far away you can see something
+- `znear` represents how close something can be to the camera and still be in your sight
+- `width` and height represent the amount of space elegible for you to see. In this case the whole screen is what we want to see so we instantiate the `Camera` class with our screen's height and width.
+
+
+```py 
+@dataclass
+class Camera: 
+    fov: float
+    zfar: float
+    znear: float
+    width: float
+    height: float
+
+    def aspect_ratio(self) -> float:
+        return self.width/self.height
+```
+
 
 # Space
 
@@ -118,18 +203,16 @@ In 3D rendering we have two spaces we worry about and that is world space (Where
 </p>
 
 
-# Object Files
-An object file identitfied by the `.obj` extension on files. 
-Is a file format used for 3D objects. 
-
-
-
 # The Projection Matrix
 
-The projection matrix is a transformation matrix that 
+The purpose of the Projection Matrix is to project our vertexs in $\mathbb{R}^4$ onto our screen of points which is of $\mathbb{R}^2$
+
+Below is a more viual representation of what that would look like
+
 <p align = "center">
   <img width="722" height="522" alt="image" src="https://github.com/user-attachments/assets/62c58ecd-8b50-45c1-8945-48648f8ac34b" />
 </p>
+
 Let $\theta = \text{Field of View}$
 
 Let $a = \text{aspect ratio} = width / height$
@@ -140,12 +223,110 @@ $$
 \begin{bmatrix} 
   \frac{f}{a} & 0 & 0 & 0\\
   0 & f & 0 & 0 \\
-  0 & 0 & -\frac{-z_{far} - z_{near}}{z_{far} - z_{near}} & -1 \\
+  0 & 0 & \frac{-z_{far} - z_{near}}{z_{far} - z_{near}} & -1 \\
   0 & 0 & -2\cdot \frac{z_{near} \cdot z_{far}}{z_{far} - z_{near}} & 0 \\
 \end{bmatrix}
 $$
 
+We can represent this projection in Python using NumPy 
+
+```py
+def projection(camera: Camera) -> np.ndarray:
+    aspect = camera.aspect_ratio()
+    f = 1 / math.tan(math.radians(camera.fov) / 2)
+    znear = camera.znear
+    zfar = camera.zfar
+
+    return np.array([
+        [f/aspect, 0, 0, 0],
+        [0, f, 0, 0],
+        [0, 0, -(zfar + znear)/(zfar - znear), -1],
+        [0, 0, -2*znear*zfar/(zfar - znear), 0]
+    ], dtype=np.float32)
+```
+
 Using the `cube.obj` file we should be able to produce the front of a cube through using the projected points of each vertex and then drawing it in order of the faces for each triangle (This is also known as the winding order)
+
+So if we take each triangle we want to render as $t$ noting that each triangle has three points represneted as vectors.
+We can project each point from the triangle using the projection matrix while notating each vertex of the triangle as $t_{n}$ like so
+
+$$
+  \vec{p_n} = (proj) (\vec{t_{n}})
+$$
+
+With this we have no offically gone from world space to screen space!
+
+Now we are almost done with the matrix manipulation, We have our coordinates in the form of 
+
+$$
+  \vec{p_n} = \begin{bmatrix}
+    x \\
+    y \\
+    z \\
+    w
+  \end{bmatrix}
+$$
+
+The issue is we still have yet to get to our end result of $\mathbb{R}^4 \to \mathbb{R}^2$ 
+
+To do this we must normalize or coordinates into $\mathbb{R}^2$ and this is done via
+
+$$
+  \vec{p_n}\prime = \begin{bmatrix}
+    x' \\
+    y' \\
+    z' \\
+    1
+  \end{bmatrix} = \begin{bmatrix}
+    x/w \\
+    y/w \\
+    z/w \\
+    w/w
+  \end{bmatrix} 
+$$
+
+You may notice that we still have $z'$ here in our "$\mathbb{R}^2$" vector and that's because $z'$ represents the depth in relation to our $z_{near}$ and $z_{far}$ planes, so $x'$ and $y'$ are the only things accounting for location here. So we can effectivly ignore $z'$ for drawing and only worry about $x'$ and $y'$
+
+With our new $\vec{p_n}'$ we now have a vertex of the triangle in screen coordinates which means we can draw the pixel (I lied). What we actually have is the projected coordinate into normalized device coordinates meaning that our point will be in the interval of $(-1, 1)$ on the screen. 
+
+So if we want to scale it to our resolution we must multiply it using this formula
+
+$$
+  x_{\text{screen}} = \left\lfloor \frac{x' + 1}{2} \cdot \text{screen width} \right\rfloor
+$$
+$$
+  y_{\text{screen}} = \left\lfloor 1 - \frac{y' + 1}{2} \cdot \text{screen height} \right\rfloor 
+$$
+
+We floor it here because screen space exists as a grid of cells meaning that our coordinates must be in $\mathbb{Z}^2$.
+
+
+Now we have gotten to the part of glory! we can finally draw each vertex of each triangle onto the screen!
+
+```py
+width, height = screen.get_size()
+screen_points = []
+
+for p in projected_points:
+    # p is gonna be of the form [x, y, z, w]
+    # We then normalize x and y with w to fit it onto R^2
+    if p[3] != 0:
+        x_ndc = p[0] / p[3]  # Normalize x via x' = x/w
+        y_ndc = p[1] / p[3]  # Normalize y via y' = y/w
+    else:
+        x_ndc, y_ndc = 0, 0
+    
+
+    # convert from normalized device coords (-1..1) to screen coordinates
+    x_screen = int((x_ndc + 1) * 0.5 * width)
+    y_screen = int((1 - (y_ndc + 1) * 0.5) * height)  # flip y-axis
+    screen_points.append((x_screen, y_screen))
+# draw triangle lines
+pygame.draw.polygon(screen, color, screen_points, width=1) 
+```
+
+If you draw it the way followed here you may arrive at a similar result to what is below. 
+
 <p align = "center">
   <img width="796" height="632" alt="image" src="https://github.com/user-attachments/assets/5e651f9a-77ba-4e46-b323-838e3b3217dd" />
 </p>

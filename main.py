@@ -55,15 +55,15 @@ def draw_triangle(screen, projected_points, color=(255,255,255)):
 
     for p in projected_points:
         # p is gonna be of the form [x, y, z, 1]
+        # We then normalize x and y with z to fit it onto R^2
         if p[3] != 0:
             x_ndc = p[0] / p[3]  # Normalize x via x' = x/z
             y_ndc = p[1] / p[3]  # Normalize y via y' = y/z
         else:
             x_ndc, y_ndc = 0, 0
+        
 
         # convert from normalized device coords (-1..1) to screen coordinates
-        # ndc is used to represent coordinates removed from resolutions
-         
         x_screen = int((x_ndc + 1) * 0.5 * width)
         y_screen = int((1 - (y_ndc + 1) * 0.5) * height)  # flip y-axis
         screen_points.append((x_screen, y_screen))
@@ -78,17 +78,15 @@ def render(screen, renderBuffer:RenderBuffer, projMat: np.matrix , camera: Camer
         p3 = renderBuffer.verts[tris[2]]
 
 
-        tris = [p1, p2, p3]
+        # This takes our non projected points 
+        tri = [p1, p2, p3]
         projected_points = np.stack([
-            projMat @ tris[0],
-            projMat @ tris[1],
-            projMat @ tris[2]
+            projMat @ tri[0],
+            projMat @ tri[1],
+            projMat @ tri[2]
         ])
 
-
-
-        print(projected_points)
-
+        #draw the projected points on the screen
         draw_triangle(screen, projected_points, color=(255,0,0))
 
 

@@ -1,12 +1,10 @@
 from pathlib import Path
 import numpy as np
 
-
 class RenderBuffer:
-    verts: list[np.ndarray]
+    verts: list[np.ndarray] 
     tris: list[tuple[int, int, int]]
-
-
+    
     def __init__(self):
         self.verts = []
         self.tris = []
@@ -24,29 +22,29 @@ class ObjReader:
         render_buffer = RenderBuffer()
         for line in lines: 
             line = line.strip()
-            match line[0]:
-                case 'v':
-                    values = line[1:] 
+            if line[0] == 'v':
+                values = line[1:] 
 
-                    values:list[str] = values.strip().split(' ')
-                    float_values:list[float] = [] 
-                    
-                    for value in values:
-                        float_values.append(float(value))
-                    float_values.append(1)
-                    render_buffer.verts.append(float_values)
+                values:list[str] = values.strip().split(' ')
+                float_values:list[float] = [] 
+                
+                for value in values:
+                    float_values.append(float(value))
+                float_values.append(1)
+                render_buffer.verts.append(float_values)
+                continue
 
-                case 'f':
-                    values = line[1:] 
+            if line[0] == 'f':
+                values = line[1:] 
 
-                    values:list[str] = values.strip().split(' ')
-                    index_values:list[tuple[int, int, int]] = [] 
-                    
-                    for value in values:
-                        index_values.append(int(value) - 1)
+                values:list[str] = values.strip().split(' ')
+                index_values:list[tuple[int, int, int]] = [] 
+                
+                for value in values:
+                    index_values.append(int(value) - 1)
 
-                    render_buffer.tris.append(tuple(index_values))
-                    pass
+                render_buffer.tris.append(tuple(index_values))
+                continue
 
         return render_buffer
     
