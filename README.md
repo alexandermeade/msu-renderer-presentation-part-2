@@ -562,11 +562,18 @@ then $t_{n}'$ would be $t_{n}$ shifted in the z-axis by $-2$.
 # Rotating Cube 
 Combining these examples we should have a rendering function resembeling
 
+
+https://github.com/user-attachments/assets/bfb4b175-46a4-459d-93e4-85a982b79f03
+
+
+
 <details>
   <summary>
     Python Implementation
   </summary>
 
+  Note: `@` is the matrix multiplication operator in `NumPy`
+  
   ```py
   for tris in renderBuffer.tris:
         p1 = renderBuffer.verts[tris[0]]
