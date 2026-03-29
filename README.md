@@ -505,7 +505,7 @@ Now armed with our rotation matrixs lets rotate our matrix!
 We can do this by taking a rotation matrix of our choice with a given $\theta$ and multiplying our pre projected points with it.
 
 $$
-  r_n = (Rot_{dir})(t_n)
+  \vec{r_n} = (Rot_{dir})(\vec{t_n})
 $$
 
 <details>
@@ -530,7 +530,7 @@ To do that it is actually straight forward.
 We can have a Vector $\vec{m}$ we want to translate our points $t_{n}$ with and to do that it is simply
 
 $$
-  t_{n}' = t_{n} - \vec{m}
+  \vec{t_{n}}' = \vec{t_{n}} - \vec{m}
 $$
 
 And this will move each vertex in our triangle by $\vec{m}$ so if 
@@ -544,7 +544,7 @@ $$
   \end{bmatrix}
 $$
 
-then $t_{n}'$ would be $t_{n}$ shifted in the z-axis by $-2$.
+then $\vec{t_{n}}'$ would be $\vec{t_{n}}$ shifted in the z-axis by $-2$.
 
 <details>
   <summary>
