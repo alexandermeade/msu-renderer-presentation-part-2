@@ -4,10 +4,13 @@ import pygame.color as Color
 import utils.matrixs as matrixs
 from utils.camera import Camera
 from utils.reader import RenderBuffer, ObjReader
+from utils.rendering import fill_triangle, apply_light, draw_triangle
+import math
+
 
 def main():
 
-    objreader = ObjReader("./models/torus.obj")
+    objreader = ObjReader("./models/monkey.obj")
     renderBuffer = objreader.parse()
 
     print(renderBuffer)
@@ -58,33 +61,10 @@ def main():
 
     pygame.quit()
 
-
-def draw_triangle(screen, projected_points, color=(255,255,255)):
-    width, height = screen.get_size()
-    screen_points = []
-
-    for p in projected_points:
-        # p is gonna be of the form [x, y, z, w]
-        # We then normalize x and y with z to fit it onto R^2
-        if p[3] != 0:
-            x_ndc = p[0] / p[3]  # Normalize x via x' = x/z
-            y_ndc = p[1] / p[3]  # Normalize y via y' = y/z
-        else:
-            x_ndc, y_ndc = 0, 0
-        
-
-        # convert from normalized device coords (-1..1) to screen coordinates
-        x_screen = int((x_ndc + 1) * 0.5 * width)
-        y_screen = int((1 - (y_ndc + 1) * 0.5) * height)  # flip y-axis
-        screen_points.append((x_screen, y_screen))
-
-    # draw triangle lines
-    print(f"-----------\n{screen_points}")
-    pygame.draw.line(screen, color, screen_points[0], screen_points[1])
-    pygame.draw.line(screen, color, screen_points[1], screen_points[2])
-    pygame.draw.line(screen, color, screen_points[2], screen_points[0])
-
 def render(screen, renderBuffer:RenderBuffer, rotation_angle: float, projMat: np.matrix , camera: Camera):
+
+    prioirty_tris = []
+
     for tris in renderBuffer.tris:
         p1 = renderBuffer.verts[tris[0]]
         p2 = renderBuffer.verts[tris[1]]
@@ -99,22 +79,54 @@ def render(screen, renderBuffer:RenderBuffer, rotation_angle: float, projMat: np
         rotate_y_mat = matrixs.rotate_y(rotation_angle)
         
         #rotate 
-        for (i, p) in enumerate(tri):
-            tri[i] = rotate_y_mat @ rotate_x_mat @ rotate_z_mat @ p    
-        
+        for (i, _) in enumerate(tri):
+            tri[i] = rotate_y_mat @ rotate_x_mat @ rotate_z_mat @ tri[i] 
+
         # translate
         for (i, _) in enumerate(tri): 
-            tri[i] = tri[i] - np.array([0, 0, 2, 0]) 
+            tri[i] = tri[i] - np.array([0, 0, 3, 0]) 
 
-        #points for rendering
-        projected_points = np.stack([
-            projMat @ tri[0],
-            projMat @ tri[1],
-            projMat @ tri[2]
-        ])
+        #get lines from triangle
+        line1 = tri[1] - tri[0]
+        line2 = tri[2] - tri[0]
+        line1 = line1[:3] # cut out the homogenous cord
+        line2 = line2[:3] # cut out the homogenous cord
+        #(line1)
+        #print(line2)
+        #calculate normals
+        normal = np.cross(line1, line2)
+        normal = matrixs.unit_vector(normal)
+  
 
-        #draw the projected points on the screen
-        draw_triangle(screen, projected_points, color=(255,0,0))
+        #We can "Flip" the normals aka make it look inside out by changing this from < 0 to > 0.
+        if np.dot(normal, tri[0][:3] - camera.pos) < 0:
+            
+            light_vec = np.array([0, 0, 1])
+            light_vec = matrixs.unit_vector(light_vec)
+
+
+            if np.dot(normal, tri[0][:3] - camera.pos) < 0:
+                light_intensity = max(0, np.dot(normal, light_vec))
+            else:
+                light_intensity = max(0, np.dot(-normal, light_vec))  # flip normal for back face
+            
+
+            #points for rendering
+            projected_points = np.stack([
+                projMat @ tri[0],
+                projMat @ tri[1],
+                projMat @ tri[2]
+            ])
+            # mid point here to find the average z depth in the projection. and
+            avg_z = (tri[0][2] + tri[1][2] + tri[2][2]) / 3
+            prioirty_tris.append((avg_z, light_intensity, projected_points))
+    #Sort the z depths to render the furthest ones back first and then render the cloests ones to ensure no draw overs.
+    prioirty_tris.sort(key=lambda t: t[0], reverse=False)
+
+    #Draw each triangle.
+    for avg_z, light_intensity, tri in prioirty_tris:
+        fill_triangle(screen, tri, color=apply_light((255, 0, 0), light_intensity))
+
 
 if __name__ == "__main__":
     main()

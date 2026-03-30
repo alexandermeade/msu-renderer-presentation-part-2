@@ -75,3 +75,10 @@ def projection2(camera: Camera) -> np.ndarray:
         [0, 0, zplane, 1],
         [0, 0, -camera.znear * zplane, 0]
     ])
+
+
+def unit_vector(vector: np.ndarray):
+    norm_value = np.linalg.norm(vector)
+    if norm_value == 0:
+        return vector
+    return vector / norm_value
