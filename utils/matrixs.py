@@ -25,7 +25,6 @@ import math
 #        [0 0 -znear*q 0]
 # 1/z * [afx, fy, zq-znq, z] * proj
 #The projection =1/z * [afx, fy, zq-znq, z] * proj 
-
 def projection(camera: Camera) -> np.ndarray:
     aspect = camera.aspect_ratio()
     f = 1 / math.tan(math.radians(camera.fov) / 2)

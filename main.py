@@ -4,16 +4,17 @@ import pygame.color as Color
 import utils.matrixs as matrixs
 from utils.camera import Camera
 from utils.reader import RenderBuffer, ObjReader
-from utils.rendering import fill_triangle, apply_light, draw_triangle
-import math
+from utils.rendering import fill_triangle
 
 
 def main():
 
-    objreader = ObjReader("./models/monkey.obj")
+    file_path = "./models/torus.obj"
+    objreader = ObjReader(file_path)
+    
     renderBuffer = objreader.parse()
 
-    print(renderBuffer)
+    print(f"File {file_path} has loaded!")
 
     pygame.init()
 
@@ -33,8 +34,6 @@ def main():
 
     angle = 0
 
-
-
     WHITE:Color = (255, 255, 255)
     # game loop
     running = True
@@ -43,9 +42,9 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
   
-        angle += 0.01
+        angle += 0.005
         screen.fill(WHITE)
-        #dt = clock.tick(60) / 1000.0
+
         projMat = matrixs.projection(camera)
         render(
             screen= screen, 
@@ -54,8 +53,7 @@ def main():
             projMat=projMat, 
             camera=camera
         )
-        # Get delta time in milliseconds and convert to seconds (float)
-        
+       
         #updates the next frame
         pygame.display.flip()
 
@@ -84,19 +82,20 @@ def render(screen, renderBuffer:RenderBuffer, rotation_angle: float, projMat: np
 
         # translate
         for (i, _) in enumerate(tri): 
-            tri[i] = tri[i] - np.array([0, 0, 3, 0]) 
+            tri[i] = tri[i] - np.array([0, 0, 2, 0]) 
 
         #get lines from triangle
         line1 = tri[1] - tri[0]
         line2 = tri[2] - tri[0]
         line1 = line1[:3] # cut out the homogenous cord
         line2 = line2[:3] # cut out the homogenous cord
+        
         #(line1)
         #print(line2)
         #calculate normals
         normal = np.cross(line1, line2)
         normal = matrixs.unit_vector(normal)
-  
+        avg_z = (tri[0][2] + tri[1][2] + tri[2][2]) / 3
 
         #We can "Flip" the normals aka make it look inside out by changing this from < 0 to > 0.
         if np.dot(normal, tri[0][:3] - camera.pos) < 0:
@@ -105,7 +104,7 @@ def render(screen, renderBuffer:RenderBuffer, rotation_angle: float, projMat: np
             light_vec = matrixs.unit_vector(light_vec)
 
 
-            if np.dot(normal, tri[0][:3] - camera.pos) < 0:
+            if np.dot(normal, tri[0][:3] - light_vec) < 0:
                 light_intensity = max(0, np.dot(normal, light_vec))
             else:
                 light_intensity = max(0, np.dot(-normal, light_vec))  # flip normal for back face
@@ -118,14 +117,16 @@ def render(screen, renderBuffer:RenderBuffer, rotation_angle: float, projMat: np
                 projMat @ tri[2]
             ])
             # mid point here to find the average z depth in the projection. and
-            avg_z = (tri[0][2] + tri[1][2] + tri[2][2]) / 3
+
             prioirty_tris.append((avg_z, light_intensity, projected_points))
+
     #Sort the z depths to render the furthest ones back first and then render the cloests ones to ensure no draw overs.
+    #t[0] is the index for the avg_z of each face in the tuple of prioirty points 
     prioirty_tris.sort(key=lambda t: t[0], reverse=False)
 
     #Draw each triangle.
     for avg_z, light_intensity, tri in prioirty_tris:
-        fill_triangle(screen, tri, color=apply_light((255, 0, 0), light_intensity))
+        fill_triangle(screen, tri, (255, 0, 0), light_intensity)
 
 
 if __name__ == "__main__":
