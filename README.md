@@ -353,17 +353,17 @@ now using this we can just set each point on our screen at each $x\in [left, end
   </summary>
   
  ```py
-    # flat bottom half
-    for y in range(v0[1], v1[1] + 1):
-        x_start = interpolate_triangle(y, v0, v1)
-        x_end = interpolate_triangle(y, v0, v2)
-        # If start > end then that implies
-        # Our "left side" of the triangle might actually be the 
-        # right edge. 
-        if x_start > x_end:
-            x_start, x_end = x_end, x_start
-        for x in range(x_start, x_end + 1):
-            screen.set_at((x, y), color)     
+# flat bottom half
+for y in range(v0[1], v1[1] + 1):
+    x_start = interpolate_triangle(y, v0, v1)
+    x_end = interpolate_triangle(y, v0, v2)
+    # If start > end then that implies
+    # Our "left side" of the triangle might actually be the 
+    # right edge. 
+    if x_start > x_end:
+        x_start, x_end = x_end, x_start
+    for x in range(x_start, x_end + 1):
+        screen.set_at((x, y), color)     
  ```
 </details>
 
@@ -380,7 +380,8 @@ $$
   Y \in [\vec{v}_1, \vec{v}_2]
 $$
 
-This is quite litterally the same implementation as the one before but instead we draw in respect to that interval instead of the past interval.
+
+The middle vertex $v_1$ creates a kink in the left edge of the triangle. Our interpolation function draws straight lines, so it can't follow that kink in one pass thus we split it at $v_1$ and draw to $v_2$ to fill it in.
 
 <details>
   <summary>
