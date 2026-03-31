@@ -267,7 +267,7 @@ This is where the concept of interpolation comes in. It is good to know that the
 Let's first define our interpolation function and some relevant info. 
 
 $$
-  \text{Interpolate}(Y, \vec{S}, \vec{E}) = \left\lfloor \vec{S}_x + (Y - \vec{S}_y) + \frac{\Delta x}{\Delta y} \right\rfloor
+  \text{Interpolate}(Y, \vec{S}, \vec{E}) = \left\lfloor \vec{S}_x + (Y - \vec{S}_y) \frac{\Delta x}{\Delta y} \right\rfloor
 $$
 
 with
